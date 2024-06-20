@@ -45,7 +45,7 @@ pub enum CoSignerError {
 
 /// Create a test Partially-Signed Bitcoin Transaction for use with signing.
 ///
-/// NOTE: In the actual co-signing application, the PSBT a Babylon staking transaction.
+/// NOTE: In the actual co-signing application, the PSBT is a Babylon staking transaction.
 pub fn create_test_psbt(
     tap_internal_key: XOnlyPublicKey,
     tap_merkle_root: Option<TapNodeHash>,
@@ -60,12 +60,12 @@ pub fn create_test_psbt(
         Err(CoSignerError::BadTestTxnValue)?;
     }
 
-    // sample random values for txid and vout for the UTXO
+    // sample random values for txid and vout for a dummy UTXO
     let mut rng = OsRng;
     let txid: [u8; 32] = rng.gen();
     let vout = rng.gen::<u8>() % 16;
 
-    // the transaction input that we will spend
+    // the dummy transaction input that we will spend
     let in1 = TxIn {
         previous_output: OutPoint {
             txid: Txid::from(*Hash::from_bytes_ref(&txid)),

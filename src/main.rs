@@ -89,7 +89,7 @@ fn main() -> Result<(), CoSignerError> {
     // ********************************
     //
     // In the real application, the two signers are located on different machines
-    // and they each run their respective part of the protocl. Here, we run both
+    // and they each run their respective part of the protocol. Here, we run both
     // signers locally to demonstrate how they work.
     println!("\nStep 4: running muSigv2 protocol...");
 

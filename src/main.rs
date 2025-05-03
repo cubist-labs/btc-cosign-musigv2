@@ -113,10 +113,10 @@ fn main() -> Result<(), CoSignerError> {
     );
 
     // *
-    // * Step 4b: signers complete the first round
+    // * Step 4b: Party 0 completes the first round and sends nonce to Party 1
     // *
     //
-    // Party 0, first round
+    // Party 0: generate nonce
     let party_0_nonce_seed: [u8; 32] = rng.gen();
     let mut party_0_first_round = FirstRound::new(
         key_aggregation_context.clone(),
@@ -127,8 +127,12 @@ fn main() -> Result<(), CoSignerError> {
             .with_message(&sighash),
     )?;
     let party_0_public_nonce = party_0_first_round.our_public_nonce();
+
+    // *
+    // * Step 4c: Party 1 generates nonce, receives nonce from Party 0, generates partial sig
+    // *
     //
-    // Party 1, first round
+    // Party 1: generate nonce
     let party_1_nonce_seed: [u8; 32] = rng.gen();
     let mut party_1_first_round = FirstRound::new(
         key_aggregation_context,
@@ -139,54 +143,48 @@ fn main() -> Result<(), CoSignerError> {
             .with_message(&sighash),
     )?;
     let party_1_public_nonce = party_1_first_round.our_public_nonce();
-
-    // *
-    // * Step 4c: each party sends the other party its public nonce
-    // *
     //
-    // Party 0 receives from Party 1
-    party_0_first_round.receive_nonce(1, party_1_public_nonce)?;
-    assert!(party_0_first_round.is_complete());
-    //
-    // Party 1 receives from Party 0
+    // Party 1: receive nonce from Party 0
     party_1_first_round.receive_nonce(0, party_0_public_nonce)?;
     assert!(party_1_first_round.is_complete());
-
-    // *
-    // * Step 4d: each party starts the second round and produces their partial signature
-    // *
     //
-    // Party 0
-    let mut party_0_second_round =
-        party_0_first_round.finalize(party_0_key.secret_key(), &sighash)?;
-    let party_0_partial_sig: PartialSignature = party_0_second_round.our_signature();
-    //
-    // Party 1
+    // Party 1: generate partial sig
     let mut party_1_second_round =
         party_1_first_round.finalize(party_1_key.secret_key(), &sighash)?;
     let party_1_partial_sig: PartialSignature = party_1_second_round.our_signature();
 
+
     // *
-    // * Step 4e: each party sends the other party its partial signature
+    // * Step 4d: Party 0 receives nonce and partial sig from Party 1,
+    // *          generates partial and final sigs
     // *
     //
-    // Party 0 receives from Party 1
+    // Party 0: receive nonce from Party 1
+    party_0_first_round.receive_nonce(1, party_1_public_nonce)?;
+    assert!(party_0_first_round.is_complete());
+    //
+    // Party 0: generate partial sig
+    let mut party_0_second_round =
+        party_0_first_round.finalize(party_0_key.secret_key(), &sighash)?;
+    let party_0_partial_sig: PartialSignature = party_0_second_round.our_signature();
+    //
+    // Party 0: receive partial sig from Party 1
     party_0_second_round.receive_signature(1, party_1_partial_sig)?;
     assert!(party_0_second_round.is_complete());
     //
-    // Party 1 receives from Party 0
-    party_1_second_round.receive_signature(0, party_0_partial_sig)?;
-    assert!(party_1_second_round.is_complete());
-
-    // *
-    // * Step 4f: each party can now compute the signature
-    // *
-    //
-    // Party 0
+    // Party 0: generate final sig
     let party_0_final_signature: CompactSignature = party_0_second_round.finalize()?;
     let party_0_final_signature = SchnorrSignature::from(party_0_final_signature);
+
+    // *
+    // * Step 4e: Party 1 receives partial sig from Party 0, generates final sig
+    // *
     //
-    // Party 1
+    // Party 1: receive partial sig from Party 1
+    party_1_second_round.receive_signature(0, party_0_partial_sig)?;
+    assert!(party_1_second_round.is_complete());
+    //
+    // Party 1: generate final sig
     let party_1_final_signature: CompactSignature = party_1_second_round.finalize()?;
     let party_1_final_signature = SchnorrSignature::from(party_1_final_signature);
 
